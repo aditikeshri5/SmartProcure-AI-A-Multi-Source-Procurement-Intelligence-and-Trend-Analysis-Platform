@@ -1,0 +1,2 @@
+# SmartProcure-AI-A-Multi-Source-Procurement-Intelligence-and-Trend-Analysis-Platform
+SmartProcure AI is an intelligent procurement platform that uses web scraping, AI, and data analytics to collect product and supplier information from multiple sources. It compares prices, specifications, ratings, and availability, and analyzes price trends to help individuals and enterprises make faster, smarter, and cost-effective decisions.
