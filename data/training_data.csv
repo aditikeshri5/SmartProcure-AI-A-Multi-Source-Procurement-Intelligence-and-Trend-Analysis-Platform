@@ -1,16 +1,14 @@
-text,category
-"laptop computer notebook smartphone mobile phone monitor printer",electronics
-"gaming laptop phone tablet electronic device",electronics
-"office chair desk table cabinet sofa shelf furniture",furniture
-"ergonomic chair wooden desk storage cabinet",furniture
-"paper notebook pen stapler folders stationery office supplies",office
-"copy paper markers files pens office stationery",office
-"safety helmet gloves protective boots goggles mask",safety
-"industrial safety equipment reflective vest",safety
-"network switch router ethernet cable wifi access point",networking
-"internet router firewall network switch",networking
-"office laptop with solid state drive and memory",electronics
-"conference room chairs and office desks",furniture
-"bulk printer paper and notebooks for employees",office
-"protective gear for construction workers",safety
-"ethernet switch and wireless router for office",networking
+category,text
+laptop,business laptop notebook computer portable workstation
+laptop,16 gb ram laptop ssd intel ryzen notebook
+monitor,computer monitor display screen 24 inch 4k
+office furniture,office chair ergonomic desk table cabinet
+networking,wifi router ethernet network switch access point
+printer,laser printer inkjet scanner multifunction
+mobile,smartphone mobile phone android tablet
+storage,ssd hard drive external storage hdd
+projector,office projector presentation display
+safety equipment,industrial safety helmet gloves protective shoes
+audio,headphones microphone speaker conference audio
+appliance,air conditioner refrigerator appliance
+general,procurement product supply equipment item

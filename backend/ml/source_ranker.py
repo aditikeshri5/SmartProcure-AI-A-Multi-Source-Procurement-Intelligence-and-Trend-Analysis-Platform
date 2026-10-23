@@ -1,48 +1,57 @@
-"""Small, real TF-IDF + Logistic Regression category classifier."""
-from pathlib import Path
-import csv
-
-from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
 
-ROOT = Path(__file__).resolve().parents[2]
-DATA_PATH = ROOT / "data" / "training_data.csv"
-
-FALLBACK_ROWS = [
-    ("laptop computer notebook smartphone mobile phone monitor printer", "electronics"),
-    ("gaming laptop phone tablet electronic device", "electronics"),
-    ("office chair desk table cabinet sofa shelf furniture", "furniture"),
-    ("ergonomic chair wooden desk storage cabinet", "furniture"),
-    ("paper notebook pen stapler folders stationery office supplies", "office"),
-    ("copy paper markers files pens office stationery", "office"),
-    ("safety helmet gloves protective boots goggles mask", "safety"),
-    ("industrial safety equipment reflective vest", "safety"),
-    ("network switch router ethernet cable wifi access point", "networking"),
-    ("internet router firewall network switch", "networking"),
+TRAINING = [
+("laptop","business laptop notebook computer portable workstation"),
+("laptop","16 gb ram laptop ssd intel ryzen notebook"),
+("monitor","computer monitor display screen 24 inch 4k"),
+("office furniture","office chair ergonomic desk table cabinet"),
+("networking","wifi router ethernet network switch access point"),
+("printer","laser printer inkjet scanner multifunction"),
+("mobile","smartphone mobile phone android tablet"),
+("storage","ssd hard drive external storage hdd"),
+("projector","office projector presentation display"),
+("safety equipment","industrial safety helmet gloves protective shoes"),
+("audio","headphones microphone speaker conference audio"),
+("appliance","air conditioner refrigerator appliance"),
+("general","procurement product supply equipment item")
 ]
+_model = None
+def _get_model():
+    global _model
+    if _model is None:
+        x, y = zip(*TRAINING)
+        _model = Pipeline([("tfidf", TfidfVectorizer(ngram_range=(1,2), sublinear_tf=True)),
+                           ("clf", LogisticRegression(max_iter=1000, class_weight="balanced"))])
+        _model.fit(x, y)
+    return _model
 
-def load_training_rows():
-    rows = []
-    if DATA_PATH.exists():
-        with DATA_PATH.open("r", newline="", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                text = (row.get("text") or row.get("requirement") or row.get("product") or "").strip()
-                label = (row.get("category") or row.get("label") or "").strip().lower()
-                if text and label:
-                    rows.append((text, label))
-    return rows if len(rows) >= 4 and len({label for _, label in rows}) >= 2 else FALLBACK_ROWS
+def classify_category(text):
+    try:
+        model = _get_model()
+        return str(model.predict([text])[0])
+    except Exception:
+        return "general"
 
-TRAINING_ROWS = load_training_rows()
-model = Pipeline([
-    ("tfidf", TfidfVectorizer(ngram_range=(1, 2), stop_words="english")),
-    ("classifier", LogisticRegression(max_iter=1000, random_state=42))
-])
-model.fit([text for text, _ in TRAINING_ROWS], [label for _, label in TRAINING_ROWS])
-
-def predict_category(text):
-    return str(model.predict([text])[0])
-
-def model_info():
-    return {"model": "TF-IDF + Logistic Regression", "training_examples": len(TRAINING_ROWS), "categories": sorted(set(label for _, label in TRAINING_ROWS))}
+def rank_products(products, requirement, parsed=None):
+    parsed = parsed or {}
+    words = {w.lower() for w in requirement.split() if len(w) > 2}
+    budget = parsed.get("budget")
+    for product in products:
+        title = (product.get("name") or "").lower()
+        details = " ".join(str(product.get(k) or "") for k in ("description","specifications","supplier")).lower()
+        combined = title + " " + details
+        overlap = len(words & set(combined.split())) / max(1, len(words))
+        score = overlap * 65
+        price = product.get("price")
+        if isinstance(price, (int,float)) and budget:
+            score += 25 if price <= budget else max(0, 25 - ((price-budget)/max(budget,1))*50)
+        elif price is not None:
+            score += 5
+        if product.get("name"): score += 5
+        if product.get("source_url"): score += 5
+        product["relevance_score"] = round(min(100, score), 1)
+        product["category"] = classify_category((product.get("name") or "") + " " + (product.get("description") or ""))
+        product["budget_match"] = (price <= budget) if isinstance(price,(int,float)) and budget else None
+    return sorted(products, key=lambda p: p.get("relevance_score",0), reverse=True)

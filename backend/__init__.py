@@ -1,1 +1,0 @@
-"""SmartProcure AI backend package."""

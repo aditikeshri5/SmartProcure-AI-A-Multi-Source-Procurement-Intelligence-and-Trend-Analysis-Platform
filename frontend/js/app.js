@@ -1,73 +1,27 @@
-const $ = id => document.getElementById(id);
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-function money(value) {
-  return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(value);
-}
-document.querySelectorAll('[data-query]').forEach(btn => btn.addEventListener('click', () => {
-  $('query').value = btn.dataset.query;
-  $('query').focus();
-}));
-async function stats() {
-  try {
-    const response = await fetch('/api/stats');
-    const data = await response.json();
-    $('productCount').textContent = data.product_count;
-    $('categoryCount').textContent = data.categories;
-  } catch (_) {}
-}
-stats();
-$('searchForm').addEventListener('submit', async event => {
-  event.preventDefault();
-  $('message').textContent = '';
-  $('searchButton').disabled = true;
-  $('searchButton').textContent = 'Finding matches…';
-  try {
-    const response = await fetch('/api/search', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({query:$('query').value,budget:$('budget').value,quantity:$('quantity').value})
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Search failed');
-    renderResults(data);
-  } catch (error) {
-    $('message').textContent = error.message;
-  } finally {
-    $('searchButton').disabled = false;
-    $('searchButton').innerHTML = 'Find best matches <span>→</span>';
-  }
-});
-function renderResults(data) {
-  $('results').classList.remove('hidden');
-  $('resultMeta').textContent = `Predicted category: ${data.predicted_category} · ${data.total_products_checked} catalogue records checked · ML: ${data.model.model}`;
-  $('cards').innerHTML = data.recommendations.map((p,i)=>`
-    <article class="product"><span class="rank">RECOMMENDATION #${i+1}</span>
-    <h3>${escapeHtml(p.name)}</h3><div class="price">${money(p.price)}</div>
-    <div class="specs">${escapeHtml(p.specs)}</div><div class="rating">★ ${Number(p.rating).toFixed(1)} / 5</div>
-    <div class="supplier">${escapeHtml(p.supplier)} · ${escapeHtml(p.category)}</div>
-    <div class="budget">${p.within_budget?'✓ Within unit budget':'Above unit budget'}</div>
-    <div class="supplier">Estimated total: <b>${money(p.estimated_total)}</b></div></article>`).join('');
-  const rows = [
-    ['Product',...data.recommendations.map(p=>p.name)],
-    ['Category',...data.recommendations.map(p=>p.category)],
-    ['Unit price',...data.recommendations.map(p=>money(p.price))],
-    ['Specifications',...data.recommendations.map(p=>p.specs)],
-    ['Rating',...data.recommendations.map(p=>`★ ${Number(p.rating).toFixed(1)} / 5`)],
-    ['Supplier',...data.recommendations.map(p=>p.supplier)],
-    ['Estimated total',...data.recommendations.map(p=>money(p.estimated_total))]
-  ];
-  $('comparison').innerHTML = '<tbody>'+rows.map(row=>'<tr>'+row.map((cell,i)=>i===0?`<th>${escapeHtml(cell)}</th>`:`<td>${escapeHtml(cell)}</td>`).join('')+'</tr>').join('')+'</tbody>';
-  $('notice').textContent = data.notice;
-  $('results').scrollIntoView({behavior:'smooth',block:'start'});
-}
-$('scrapeForm').addEventListener('submit', async event => {
-  event.preventDefault();
-  $('scrapeOutput').classList.remove('hidden');
-  $('scrapeOutput').textContent = 'Fetching page…';
-  try {
-    const response = await fetch('/api/scrape',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:$('scrapeUrl').value})});
-    const data = await response.json();
-    $('scrapeOutput').textContent = JSON.stringify(data,null,2);
-  } catch (error) {$('scrapeOutput').textContent = error.message;}
-});
+const $ = (s) => document.querySelector(s);
+let mode = "requirement", authMode = "login", lastResult = null, lastInput = "";
+function toast(message){const el=$("#toast");el.textContent=message;el.classList.remove("hidden");setTimeout(()=>el.classList.add("hidden"),3500)}
+function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+async function api(url, options={}){const response=await fetch(url,{credentials:"same-origin",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});let data={};try{data=await response.json()}catch{}if(!response.ok)throw new Error(data.error||"Something went wrong.");return data}
+async function refreshUser(){try{const data=await api("/api/me");$("#authActions").classList.toggle("hidden",data.authenticated);$("#userMenu").classList.toggle("hidden",!data.authenticated);if(data.authenticated)$("#userMenuButton").textContent=(data.user.name.split(" ")[0]||"Account")+" ▾"}catch{}}
+function openModal(type){authMode=type;$("#authModal").classList.remove("hidden");$("#authError").classList.add("hidden");const signup=type==="register";$("#modalTitle").textContent=signup?"Create your account":"Welcome back";$("#modalSubtitle").textContent=signup?"Save searches and keep your procurement research together.":"Sign in to access your saved searches.";$("#nameField").classList.toggle("hidden",!signup);$("#accountTypeField").classList.toggle("hidden",!signup);$("#companyField").classList.toggle("hidden",!signup||$("#accountType").value!=="organization");$("#websiteField").classList.toggle("hidden",!signup||$("#accountType").value!=="organization");$("#authName").required=signup;$("#companyName").required=signup&&$("#accountType").value==="organization";$("#authPassword").autocomplete=signup?"new-password":"current-password";$("#authSubmit").textContent=signup?"Create account":"Log in";$("#modalSwitch").innerHTML=signup?'Already have an account? <button id="switchAuth">Log in</button>':'New to SmartProcure AI? <button id="switchAuth">Create an account</button>';$("#switchAuth").onclick=()=>openModal(signup?"login":"register")}
+document.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>openModal(b.dataset.open)));
+$("#closeModal").onclick=()=>$("#authModal").classList.add("hidden");
+$("#authModal").addEventListener("click",e=>{if(e.target===$("#authModal"))$("#authModal").classList.add("hidden")});
+$("#accountType").addEventListener("change",()=>{const org=$("#accountType").value==="organization";$("#companyField").classList.toggle("hidden",!org);$("#websiteField").classList.toggle("hidden",!org);$("#companyName").required=org});
+$("#authForm").addEventListener("submit",async e=>{e.preventDefault();const signup=authMode==="register",btn=$("#authSubmit");btn.classList.add("loading");$("#authError").classList.add("hidden");const payload={email:$("#authEmail").value,password:$("#authPassword").value};if(signup)Object.assign(payload,{name:$("#authName").value,account_type:$("#accountType").value,company_name:$("#companyName").value,website:$("#website").value});try{await api(signup?"/api/register":"/api/login",{method:"POST",body:JSON.stringify(payload)});$("#authModal").classList.add("hidden");await refreshUser();toast(signup?"Account created successfully.":"You are now logged in.")}catch(err){$("#authError").textContent=err.message;$("#authError").classList.remove("hidden")}finally{btn.classList.remove("loading")}});
+$("#userMenuButton").onclick=()=>$("#userDropdown").classList.toggle("hidden");
+document.addEventListener("click",e=>{if(!e.target.closest("#userMenu"))$("#userDropdown").classList.add("hidden")});
+$("#logoutButton").onclick=async()=>{try{await api("/api/logout",{method:"POST"});await refreshUser();$("#userDropdown").classList.add("hidden");toast("You have been logged out.")}catch(e){toast(e.message)}};
+document.querySelectorAll(".tab").forEach(tab=>tab.onclick=()=>{mode=tab.dataset.mode;document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===tab));$("#searchLabel").textContent=mode==="url"?"Paste a product page URL":"Describe your requirement";$("#queryInput").placeholder=mode==="url"?"https://example.com/product-page":"e.g. 10 business laptops under ₹60,000 with 16 GB RAM";$("#queryInput").value="";$("#queryInput").required=true;$("#examples").classList.toggle("hidden",mode==="url")});
+document.querySelectorAll(".example").forEach(b=>b.onclick=()=>{$("#queryInput").value=b.textContent;$("#queryInput").focus()});
+$("#searchForm").addEventListener("submit",async e=>{e.preventDefault();const input=$("#queryInput").value.trim();if(!input)return;const btn=$("#searchButton");btn.classList.add("loading");btn.disabled=true;btn.innerHTML="Working on your request";$("#resultsSection").classList.remove("hidden");$("#resultsTitle").textContent="Finding relevant products";$("#resultsSubtitle").textContent="Discovering sources and extracting accessible product details…";$("#resultsGrid").innerHTML="";$("#searchSummary").innerHTML="";$("#resultsMessage").classList.add("hidden");$("#sourceErrors").classList.add("hidden");$("#resultsSection").scrollIntoView({behavior:"smooth",block:"start"});try{lastInput=input;lastResult=await api("/api/search",{method:"POST",body:JSON.stringify(mode==="url"?{url:input}:{query:input})});renderResults(lastResult);await refreshUser()}catch(err){$("#resultsTitle").textContent="Search could not be completed";$("#resultsSubtitle").textContent="";$("#resultsMessage").textContent=err.message;$("#resultsMessage").classList.remove("hidden")}finally{btn.classList.remove("loading");btn.disabled=false;btn.innerHTML='Find best matches <span>→</span>'}});
+function money(p,c){if(p===null||p===undefined||p==="")return '<span class="not-available">Price not available</span>';let n=Number(p);if(!Number.isFinite(n))return '<span class="not-available">Price not available</span>';try{return new Intl.NumberFormat("en-IN",{style:"currency",currency:c||"INR",maximumFractionDigits:2}).format(n)}catch{return escapeHtml(n.toLocaleString())}}
+function renderResults(data){const products=data.products||[];$("#resultsTitle").textContent=products.length?`Top ${products.length} match${products.length===1?"":"es"}`:"No extractable matches yet";$("#resultsSubtitle").textContent=products.length?"Product details were extracted from accessible source pages. Check the source for the latest availability.":"No product cards are shown unless a source yielded extractable details.";$("#saveResultsButton").classList.toggle("hidden",!data.history_id);$("#searchSummary").innerHTML=[`Sources found: ${data.sources_found??0}`,`Pages extracted: ${data.sources_scraped??0}`,`Mode: ${data.mode==="direct_url"?"Direct URL":"Live web discovery"}`,`Checked: ${new Date(data.generated_at||Date.now()).toLocaleString()}`].map(x=>`<span class="summary-pill">${escapeHtml(x)}</span>`).join("");$("#resultsGrid").innerHTML=products.map((p,i)=>`<article class="product-card"><div class="product-top"><span class="rank-badge">MATCH #${i+1}</span><span class="score">${p.relevance_score??0}% relevance</span></div><h3>${escapeHtml(p.name||"Product name not available")}</h3><div class="supplier">${escapeHtml(p.supplier||p.source_domain||"Supplier not available")}</div><div class="price">${money(p.price,p.currency)}</div><div class="product-desc">${escapeHtml((p.description||"Description not available").slice(0,260))}</div><div class="product-meta">${p.category?`<span class="tag">${escapeHtml(p.category)}</span>`:""}${p.availability?`<span class="tag">${escapeHtml(p.availability)}</span>`:""}${p.budget_match===true?'<span class="tag">Within budget</span>':p.budget_match===false?'<span class="tag">Over budget</span>':""}</div>${p.specifications?`<div class="product-desc"><b>Specifications:</b> ${escapeHtml(p.specifications.slice(0,300))}</div>`:""}<div class="product-actions">${p.source_url?`<a href="${escapeHtml(p.source_url)}" target="_blank" rel="noopener noreferrer">View source ↗</a>`:""}<button type="button" onclick="navigator.clipboard?.writeText(${JSON.stringify(p.source_url||"")}).then(()=>toast('Source URL copied')).catch(()=>toast('Could not copy URL'))">Copy link</button></div><div class="supplier">Fetched: ${escapeHtml(p.extracted_at?new Date(p.extracted_at).toLocaleString():"timestamp unavailable")}</div></article>`).join("");if(!products.length){const msg=data.message||data.discovery_error||"No usable product details were extracted from the available pages.";$("#resultsMessage").textContent=msg;$("#resultsMessage").classList.remove("hidden")}if(data.discovery_error||data.source_errors?.length){$("#sourceErrors").innerHTML=`<b>Source notes</b><br>${escapeHtml(data.discovery_error||"")}${(data.source_errors||[]).map(e=>`<br>${escapeHtml(e.url)} — ${escapeHtml(e.error)}`).join("")}`;$("#sourceErrors").classList.remove("hidden")}}
+$("#saveResultsButton").onclick=()=>toast("This result has been saved in your account history."); // Search results are persisted automatically for authenticated users.
+async function loadHistory(){try{const data=await api("/api/history");const section=$("#resultsSection");section.classList.remove("hidden");$("#resultsTitle").textContent="Saved search history";$("#resultsSubtitle").textContent="Select a saved search to reopen its stored snapshot.";$("#searchSummary").innerHTML="";$("#resultsGrid").innerHTML=data.items.map(item=>`<article class="product-card"><div class="product-top"><span class="rank-badge">${escapeHtml(item.mode==="url"?"URL EXTRACTION":"PRODUCT SEARCH")}</span><button onclick="deleteHistory(${item.id})" class="example">Delete</button></div><h3>${escapeHtml(item.input_text)}</h3><div class="supplier">${new Date(item.created_at).toLocaleString()}</div><div class="product-actions"><button onclick="openHistory(${item.id})">Open saved results</button></div></article>`).join("");if(!data.items.length){$("#resultsMessage").textContent="No saved searches yet. Run a search while logged in to build your history.";$("#resultsMessage").classList.remove("hidden")}section.scrollIntoView({behavior:"smooth"})}catch(e){openModal("login")}}
+window.openHistory=async id=>{try{const data=await api(`/api/history/${id}`);lastResult=data.item.result;renderResults(lastResult)}catch(e){toast(e.message)}};
+window.deleteHistory=async id=>{if(!confirm("Delete this saved search?"))return;try{await api(`/api/history/${id}`,{method:"DELETE"});toast("Saved search deleted.");loadHistory()}catch(e){toast(e.message)}};
+$("#dashboardLink").onclick=e=>{e.preventDefault();loadHistory()};
+$("#mobileMenu").onclick=()=>document.querySelector(".desktop-nav").classList.toggle("mobile-visible");
+refreshUser();
