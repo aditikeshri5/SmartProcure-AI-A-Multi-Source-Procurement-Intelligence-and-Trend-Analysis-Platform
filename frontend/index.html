@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartProcure AI | Intelligent Procurement</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#"><span class="logo">S</span> SmartProcure <b>AI</b></a>
+  <nav><a href="#discover">Discover</a><a href="#workflow">How it works</a><span class="status">● Demo system</span></nav>
+</header>
+<main>
+  <section class="hero">
+    <div class="eyebrow">✦ AI-POWERED PROCUREMENT</div>
+    <h1>Smarter sourcing.<br><span>Better decisions.</span></h1>
+    <p>Describe what you need. SmartProcure AI categorizes your requirement, evaluates available product records, and builds a shortlist for easier purchasing decisions.</p>
+    <div class="stats"><div><strong id="productCount">—</strong><small>Product records</small></div><div><strong id="categoryCount">—</strong><small>Categories</small></div><div><strong>Top 3</strong><small>Shortlisted options</small></div></div>
+  </section>
+  <section class="panel" id="discover">
+    <div class="section-title"><span>01</span><h2>Tell us what you need</h2></div>
+    <form id="searchForm">
+      <label for="query">Product requirement</label>
+      <textarea id="query" required minlength="3" placeholder="e.g. I need laptops with 16GB RAM under ₹50000"></textarea>
+      <div class="form-grid"><div><label for="budget">Maximum unit budget (₹) <small>optional</small></label><input id="budget" type="number" min="1" placeholder="50000"></div><div><label for="quantity">Quantity required</label><input id="quantity" type="number" min="1" value="1"></div></div>
+      <div class="examples"><span>Try:</span><button type="button" data-query="laptop computer with 16GB RAM">Office laptops</button><button type="button" data-query="ergonomic office chair">Office chairs</button><button type="button" data-query="network router and ethernet switch">Networking</button><button type="button" data-query="safety helmet and gloves">Safety equipment</button></div>
+      <button class="primary" id="searchButton" type="submit">Find best matches <span>→</span></button>
+      <p id="message" role="status"></p>
+    </form>
+  </section>
+  <section class="panel hidden" id="results">
+    <div class="section-title"><span>02</span><h2>Your recommended shortlist</h2><b class="pill">✦ ML-assisted</b></div>
+    <p id="resultMeta" class="muted"></p><div id="cards" class="cards"></div>
+    <h3>Side-by-side comparison</h3><div class="table-wrap"><table id="comparison"></table></div>
+    <p id="notice" class="notice"></p>
+  </section>
+  <section class="panel">
+    <div class="section-title"><span>03</span><h2>Web page data extractor</h2></div>
+    <p class="muted">Extract basic title, description, text and price mentions from a public webpage. Scraped text is shown for inspection and is not automatically added to the product database.</p>
+    <form id="scrapeForm" class="scrape-form"><input id="scrapeUrl" type="url" placeholder="https://example.com/product" required><button class="secondary" type="submit">Extract page data</button></form>
+    <pre id="scrapeOutput" class="output hidden"></pre>
+  </section>
+  <section class="panel" id="workflow">
+    <div class="section-title"><span>04</span><h2>How it works</h2></div>
+    <div class="steps"><article><b>01 / Understand</b><h3>NLP extraction</h3><p>Extracts budget and quantity when stated, and normalizes the requirement text.</p></article><article><b>02 / Classify</b><h3>Machine learning</h3><p>TF-IDF transforms text into features; Logistic Regression predicts the product category.</p></article><article><b>03 / Rank</b><h3>Recommendation engine</h3><p>Category match, keyword overlap, budget fit and rating contribute to ranking.</p></article><article><b>04 / Compare</b><h3>Decision support</h3><p>Displays three candidates, specifications, supplier labels and estimated totals.</p></article></div>
+  </section>
+  <footer>SmartProcure AI · Academic MVP · Illustrative sample catalogue</footer>
+</main>
+<script src="/static/js/app.js"></script>
+</body></html>
